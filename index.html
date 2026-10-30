@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI에이전트마스터 2주차 실습</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 상단 과정 헤더 + 진행률, 모듈 탭(한 번에 한 모듈), 모듈 안은 개념 카드 → 단계 체크리스트 → 복사 블록 */
+:root{
+  --bg:#F3F5F8; --surface:#FFFFFF; --sunk:#E9EDF3; --line:#D5DCE6;
+  --ink:#16202C; --muted:#5A6676; --accent:#2D55D6; --accent-soft:#E3EAFC;
+  --copy:#B26B00; --copy-soft:#FFF3DD; --good:#1E7F4F; --good-soft:#E1F3E9; --warn:#A8461A; --warn-soft:#FBE8DE;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10151C; --surface:#18202A; --sunk:#202A36; --line:#2D3947;
+  --ink:#E7ECF2; --muted:#9AA6B5; --accent:#7D9BFF; --accent-soft:#1F2C4D;
+  --copy:#F2B54A; --copy-soft:#3A2C12; --good:#5FCB93; --good-soft:#163326; --warn:#F09A70; --warn-soft:#3A2218; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151C; --surface:#18202A; --sunk:#202A36; --line:#2D3947;
+  --ink:#E7ECF2; --muted:#9AA6B5; --accent:#7D9BFF; --accent-soft:#1F2C4D;
+  --copy:#F2B54A; --copy-soft:#3A2C12; --good:#5FCB93; --good-soft:#163326; --warn:#F09A70; --warn-soft:#3A2218; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.65;margin:0}
+.wrap{max-width:980px;margin:0 auto;padding-inline:20px;padding-block:28px 48px}
+h1,h2,h3{text-wrap:balance;line-height:1.3;margin:0}
+a{color:var(--accent)}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+/* header */
+.course{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;color:var(--muted);font-size:.85rem;letter-spacing:.02em}
+.course b{color:var(--accent);font-weight:600}
+h1{font-size:clamp(1.6rem,3.6vw,2.2rem);font-weight:700;margin-top:6px}
+.lead{color:var(--muted);max-width:62ch;margin:8px 0 0}
+.progress{margin-top:18px;display:flex;align-items:center;gap:12px}
+.bar{flex:1;height:8px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--good);transition:width .3s}
+.progress span{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* tabs */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-top:20px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
+.tabs ol{list-style:none;display:flex;gap:4px;margin:0;padding:0;min-width:max-content}
+.tabs button{font:inherit;font-size:.92rem;border:0;background:none;color:var(--muted);padding:12px 12px 10px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tabs button:focus-visible,.btn:focus-visible,.copybtn:focus-visible,input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.tabs .n{font-family:var(--f-mono);font-size:.78rem;margin-right:6px;color:var(--accent)}
+/* module */
+section.mod{padding-top:26px}
+.mod-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;align-items:baseline}
+.mod-head h2{font-size:1.45rem}
+.time{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.goal{margin:10px 0 0;max-width:68ch}
+h3{font-size:1.05rem;margin:28px 0 12px;display:flex;gap:8px;align-items:center}
+h3::before{content:"";width:6px;height:18px;border-radius:2px;background:var(--accent)}
+.concepts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.concept{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.concept b{display:block;font-weight:600}
+.concept small{display:block;color:var(--muted);font-size:.88rem;margin-top:4px;line-height:1.55}
+/* flow */
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0}
+.flow span{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.9rem}
+.flow span.key{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.flow em{font-style:normal;color:var(--muted)}
+/* steps */
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:28px 1fr;gap:4px 12px;min-width:0}
+.step.done{border-color:var(--good);background:linear-gradient(var(--good-soft),var(--good-soft)) padding-box}
+.step input{width:20px;height:20px;margin:3px 0 0;accent-color:var(--good);cursor:pointer}
+.step .body{min-width:0}
+.step label{font-weight:600;cursor:pointer}
+.step p{margin:4px 0 0;color:var(--muted);font-size:.93rem}
+.cp{display:inline-block;font-family:var(--f-mono);font-size:.72rem;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:2px;font-weight:600}
+/* copy block */
+.copy{margin-top:10px;border:1px dashed var(--copy);background:var(--copy-soft);border-radius:8px;min-width:0}
+.copy-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px 0 12px}
+.tag{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--copy)}
+.copybtn{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--copy);background:var(--surface);color:var(--copy);border-radius:6px;padding:3px 10px;cursor:pointer}
+.copybtn.ok{background:var(--good);border-color:var(--good);color:var(--surface)}
+.copy pre{margin:0;padding:6px 12px 12px;white-space:pre-wrap;word-break:break-word;font-family:var(--f-mono);font-size:.86rem;line-height:1.6;color:var(--ink);overflow-x:auto}
+.copy.url pre{word-break:break-all}
+/* callouts */
+.note{border-radius:10px;padding:12px 16px;margin-top:14px;font-size:.93rem}
+.note.tip{background:var(--accent-soft)}
+.note.warn{background:var(--warn-soft)}
+.note.warn b{color:var(--warn)}
+.note.tip b{color:var(--accent)}
+.formula{background:var(--surface);border:2px solid var(--accent);border-radius:12px;padding:16px 18px;margin-top:6px}
+.formula .eq{font-family:var(--f-mono);font-size:1rem;font-weight:600;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.formula .eq span{background:var(--accent-soft);border-radius:6px;padding:4px 10px}
+.formula .eq em{font-style:normal;color:var(--muted)}
+.tree{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}
+.tree pre{margin:0;font-family:var(--f-mono);font-size:.85rem;line-height:1.7}
+.tree .c{color:var(--muted)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.78rem;letter-spacing:.04em;color:var(--muted);font-weight:600;background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+td .copybtn{white-space:nowrap}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:32px;flex-wrap:wrap}
+.btn{font:inherit;font-size:.92rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:10px 16px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.btn[disabled]{visibility:hidden}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:14px;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+/* colab notebooks */
+.nbbox{display:grid;gap:14px}
+.dlrow{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.dlrow p{margin:0;color:var(--muted);font-size:.9rem;max-width:56ch;min-width:0}
+.settings{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.settings h4{margin:0 0 4px;font-size:.95rem}
+.settings .hint{margin:0 0 12px;color:var(--muted);font-size:.86rem}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 12px}
+.fields label{display:grid;gap:4px;font-size:.8rem;color:var(--muted);font-weight:600;min-width:0}
+.fields input{font:inherit;font-size:.95rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%;min-width:0}
+.fields input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.nbcard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.nbcard header{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.nbcard h4{margin:0;font-size:1rem;font-family:var(--f-mono);font-weight:600}
+.nbcard .io{font-size:.82rem;color:var(--muted);font-family:var(--f-mono)}
+.nbcard .io b{color:var(--good);font-weight:600}
+.nbcard p{margin:6px 0 0;color:var(--muted);font-size:.9rem}
+.nbcard .copy pre{max-height:260px;overflow:auto;white-space:pre;word-break:normal}
+.badge{font-size:.72rem;font-weight:700;border-radius:99px;padding:1px 8px;background:var(--sunk);color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:8px;font-size:.88rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:560px){.wrap{padding-inline:16px}.step{grid-template-columns:24px 1fr;padding:12px}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="course"><b>AI 에이전트 마스터 </b><span>2주차 실습 강의안</span><span>강사 김성식</span></div>
+    <h1>크롤링한 데이터로 보고서와 PPT까지, 스킬로 끝내기</h1>
+    <p class="lead">AI 브라우저로 조사하고, 구글 코랩으로 뉴스 100건을 모으고, 남이 만든 스킬을 작업 폴더에 깔아 Antigravity에서 보고서와 PPT를 만듭니다. 단계를 끝낼 때마다 체크하세요.</p>
+    <div class="progress" aria-live="polite"><div class="bar"><i id="barFill"></i></div><span id="barText">0 / 0 단계</span></div>
+    <div class="legend"><span><i style="background:var(--copy-soft);border:1px dashed var(--copy)"></i>복사해서 붙여넣는 부분</span><span><span class="cp" style="margin:0 6px 0 0">줌 3번</span>강사가 확인할 때 줌 채팅에 입력할 번호</span></div>
+  </header>
+
+  <nav class="tabs" aria-label="모듈"><ol id="tabs" role="tablist"></ol></nav>
+  <main id="main"></main>
+
+  <footer><span>출처: 2주차 강의 녹화본·줌 채팅 기록·강의 자료(2주차 압축파일)</span><span>작성일: 2026-10-03 | 버전: v2</span></footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const NB_ZIP_B64="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fy1sT3knIsdhl6dRzw1XNiqW/DpjLouboFwcBWjWiapkSHsN3l8vMXiRU1ID1AJyaOTxMJeZPEtQ202y2b6EAZG/O9rNxAgQLuCT+zbz2cH446fh43+h6NFO+N3uX5C8nVE6lNH40cNo/6ioIUG66PG/CnQdtduAX10XpUjXAcKz1pyeudX4lXI9+U/B+rnhb1BLAQIUAxQAAAgIAB2uQ10b1g200wgAADkVAAA1AAAAAAAAAAAAAACAAQAAAADtgazroaTrp4Ff6rWs6riA7L2U656pLzEu64m07Iqk7KO87IaMX+2BrOuhpOufrC5pcHluYlBLAQIUAxQAAAgIAB2uQ10Ec25m4QcAAIYTAAA1AAAAAAAAAAAAAACAASYJAADtgazroaTrp4Ff6rWs6riA7L2U656pLzIu64m07Iqk67O466y4X+yKpO2BrOueqS5pcHluYlBLAQIUAxQAAAgIAB2uQ1081MYBngoAAMkZAAA4AAAAAAAAAAAAAACAAVoRAADtgazroaTrp4Ff6rWs6riA7L2U656pLzMu67iU66Gc6re47KO87IaMIO2BrOuhpOufrC5pcHluYlBLAQIUAxQAAAgIAB2uQ13gZH2uFQcAADgRAAA4AAAAAAAAAAAAAACAAU4cAADtgazroaTrp4Ff6rWs6riA7L2U656pLzQu67iU66Gc6re467O466y47Iqk7YGs656pMS5pcHluYlBLBQYAAAAABAAEAJIBAAC5IwAAAAA=";
+const NB_CODE={"1.뉴스주소_크롤러.ipynb": ["import undetected_chromedriver as uc\nfrom selenium.webdriver.common.by import By\nfrom selenium.webdriver.support.ui import WebDriverWait\nfrom selenium.webdriver.support import expected_conditions as EC\nfrom selenium.webdriver.common.keys import Keys\nimport pandas as pd\nimport time\n\ndef scrape_naver_sds_main_only(keyword, target_count=100):\n    print(f\"🚀 SDS headline1 메인 뉴스 추출 시작 (목표: {target_count}개): {keyword})\")\n\n    options = uc.ChromeOptions()\n    options.add_argument('--headless=new') # 디버깅 시에는 주석 처리해서 브라우저가 도는 걸 확인하세요\n    options.add_argument('--no-sandbox')\n    options.add_argument('--disable-dev-shm-usage')\n    options.add_argument(\"user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36\")\n    options.binary_location = '/usr/bin/google-chrome-stable' # Colab에서 Google Chrome 바이너리 위치 지정\n\n    # Fix: Specify the main version of Chrome to match the installed browser\n    driver = uc.Chrome(options=options)\n\n    try:\n        url = f\"https://search.naver.com/search.naver?where=news&query={keyword}\"\n        driver.get(url)\n        wait = WebDriverWait(driver, 10)\n\n        results = []\n        last_height = driver.execute_script(\"return document.body.scrollHeight\")\n\n        while len(results) < target_count:\n            # 1. 현재 화면의 요소들 추출\n            main_spans = driver.find_elements(By.CSS_SELECTOR, \"span.sds-comps-text-type-headline1\")\n            print(f\"DEBUG: Found {len(main_spans)} main spans on current page.\")\n\n            for span in main_spans:\n                try:\n                    title = span.text.strip()\n                    if not title: continue\n\n                    parent_a = span.find_element(By.XPATH, \"./ancestor::a\")\n                    link = parent_a.get_attribute(\"href\")\n\n                    # 중복 체크 후 추가\n                    if link and not any(res['Link'] == link for res in results):\n                        results.append({\"Title\": title, \"Link\": link})\n                        if len(results) >= target_count: break\n                except Exception as e:\n                    print(f\"DEBUG: Error extracting title/link from span ('{span.text.strip()}'): {e}\")\n                    continue\n\n            if len(results) >= target_count:\n                break\n\n            # 2. 스크롤 내리기 (네이버는 스크롤 시 새로운 뉴스를 로딩함)\n            try:\n                driver.execute_script(\"window.scrollTo(0, document.body.scrollHeight);\")\n                time.sleep(2) # 로딩 대기\n\n                new_height = driver.execute_script(\"return document.body.scrollHeight\")\n                if new_height == last_height: # 더 이상 내려갈 곳이 없으면(결과 부족 등) 종료\n                    print(f\"DEBUG: No new content loaded after scroll. Current height: {last_height}, New height: {new_height}\")\n                    break\n                last_height = new_height\n                print(f\"⏳ 현재 {len(results)}개 수집 중...\")\n            except Exception as e:\n                print(f\"DEBUG: Error during scrolling: {e}\")\n                break # 스크롤 중 오류 발생 시 루프 종료\n\n        # 결과 저장\n        if results:\n            df = pd.DataFrame(results)\n            df.to_csv(\"url_news.csv\", index=False, encoding=\"utf-8-sig\")\n            print(f\"✅ 성공! 총 {len(df)}개의 뉴스를 저장했습니다.\")\n        else:\n            print(\"🚨 검색 결과를 찾지 못했습니다.\")\n\n    except Exception as e:\n        print(f\"❌ 오류 발생: {e}\")\n    finally:\n        driver.quit()\n\nif __name__ == \"__main__\":\n    # 원하는 개수를 두 번째 인자로 전달 (예: 100)\n    scrape_naver_sds_main_only(\"AI 교육\", 100)"], "2.뉴스본문_스크랩.ipynb": ["import pandas as pd\nimport sys\n\n# Install missing dependency if not already installed\ntry:\n    import lxml_html_clean # check if lxml_html_clean is importable\nexcept ImportError:\n    print(\"Installing lxml[html_clean] to resolve ImportError...\")\n    !pip install lxml[html_clean]\n    # Restarting the kernel after installation to ensure new packages are loaded\n    # This is often necessary for packages that deeply integrate with existing ones\n    # such as lxml. If the import still fails, a manual restart might be needed.\n    print(\"Installation complete. You might need to restart the runtime for changes to take full effect.\")\n\n# Add a similar check for newspaper3k\ntry:\n    from newspaper import Article\nexcept ImportError:\n    print(\"Installing newspaper3k to resolve ModuleNotFoundError: No module named 'newspaper'...\")\n    !pip install newspaper3k\n    # Attempt to import again after installation\n    try:\n        from newspaper import Article # This will succeed if the install worked, or re-raise if it didn't.\n    except ImportError:\n        print(\"WARNING: newspaper3k was installed, but the 'newspaper' module is still not found.\")\n        print(\"A runtime restart ('Runtime' -> 'Restart runtime...') is required for changes to take full effect.\")\n        raise # Re-raise to make sure the user sees the error and acts.\n    print(\"newspaper3k installation complete. You might need to restart the runtime for changes to take full effect.\")\n\nimport time\n\ndef extract_news_content(input_csv_path, output_csv_path):\n    # 1. 이전 단계에서 저장한 CSV 불러오기\n    try:\n        df = pd.read_csv(input_csv_path)\n        print(f\"📂 {len(df)}개의 링크를 분석하기 위해 불러왔습니다.\")\n    except FileNotFoundError:\n        print(f\"❌ {input_csv_path} 파일을 찾을 수 없습니다. 먼저 주소 수집을 완료해 주세요.\")\n        return\n\n    content_results = []\n\n    # 2. 링크를 순회하며 본문 추출\n    for i, row in df.iterrows():\n        url = row['Link']\n        title = row['Title']\n\n        print(f\"[{i+1}/{len(df)}] 본문 수집 중: {title[:20]}...\")\n\n        try:\n            # newspaper3k의 Article 객체 생성 (언어는 한국어 'ko')\n            article = Article(url, language='ko')\n            article.download()\n            article.parse()\n\n            # 본문 데이터 저장 (불필요한 공백 제거)\n            text = article.text.strip()\n\n            content_results.append({\n                \"Title\": title,\n                \"Link\": url,\n                \"Content\": text if text else \"본문을 추출할 수 없습니다.\"\n            })\n\n        except Exception as e:\n            print(f\"⚠️ {title[:10]}... 수집 실패: {e}\")\n            content_results.append({\n                \"Title\": title,\n                \"Link\": url,\n                \"Content\": \"오류로 인해 수집 실패\"\n            })\n\n        # 서버 부하 방지용 짧은 휴식\n        time.sleep(1)\n\n    # 3. 결과 저장\n    final_df = pd.DataFrame(content_results)\n    final_df.to_csv(output_csv_path, index=False, encoding=\"utf-8-sig\")\n    print(f\"\\n✨ 모든 작업 완료! 본문이 포함된 파일이 '{output_csv_path}'로 저장되었습니다.\")\n\nif __name__ == \"__main__\":\n    # 이전 단계 파일명: sds_main_news.csv\n    # 결과 저장 파일명: news_with_content.csv\n    extract_news_content(\"url_news.csv\", \"content_news.csv\")"], "3.블로그주소 크롤러.ipynb": ["# Install necessary packages\n!pip install selenium webdriver-manager\n\n# Install Chrome browser\n!apt-get update\n!apt-get install -y wget\n!wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb\n!dpkg -i google-chrome-stable_current_amd64.deb\n!apt-get install -f # Install dependencies if any\n\nimport re\nfrom selenium import webdriver\nfrom selenium.webdriver.chrome.options import Options\nfrom selenium.webdriver.common.by import By\nfrom selenium.webdriver.chrome.service import Service\nfrom webdriver_manager.chrome import ChromeDriverManager\nimport pandas as pd\nimport time\n\ndef solve_naver_2026():\n    options = Options()\n    # 2026년 보안 우회를 위해 자동화 탐지 방지 설정 추가\n    options.add_experimental_option(\"excludeSwitches\", [\"enable-automation\"])\n    options.add_experimental_option('useAutomationExtension', False)\n\n    # Headless 옵션 추가 및 WebDriverManager 사용\n    options.add_argument(\"--headless\") # 실제 동작을 보고 싶다면 주석 처리\n    options.add_argument(\"--no-sandbox\")\n    options.add_argument(\"--disable-dev-shm-usage\")\n    options.add_argument(\"--window-size=1920,1080\") # Set a common window size for headless\n    options.add_argument(\"--disable-gpu\") # Often needed for headless Chrome\n    options.binary_location = \"/usr/bin/google-chrome\" # Explicitly set Chrome binary location\n\n    service = Service(ChromeDriverManager().install())\n    driver = webdriver.Chrome(service=service, options=options)\n\n    url = \"https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query=ai+%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8\"\n\n    results = []\n    try:\n        driver.get(url)\n        time.sleep(5) # 페이지가 완전히 그려질 때까지 넉넉히 대기\n\n        # Regex patterns for blog post links\n        # blog.naver.com/user_id/post_number (post_number is digits)\n        blog_post_pattern_blog = re.compile(r\"blog\\.naver\\.com/[^/]+/\\d+$\")\n        # post.naver.com/viewer/postView.naver?volumeNo=post_number&...\n        blog_post_pattern_post = re.compile(r\"post\\.naver\\.com/viewer/postView\\.naver\\?volumeNo=\\d+\")\n\n        while len(results) < 100:\n            # 2. 모든 a 태그 중 블로그 링크 패턴을 가진 것을 본문 영역에서만 추출\n            # href에 'blog.naver.com'이나 'post.naver.com'이 포함된 링크를 찾습니다.\n            all_links = driver.find_elements(By.XPATH, \"//a[contains(@href, 'blog.naver.com') or contains(@href, 'post.naver.com')]\")\n\n            for link_elem in all_links:\n                try:\n                    # 광고 영역(보통 상단이나 우측)에 있는 것은 좌표로 제외 가능하지만,\n                    # 여기서는 텍스트가 있는 '제목' 성격의 링크만 수집합니다.\n                    title = link_elem.text.strip()\n                    href = link_elem.get_attribute('href')\n\n                    # Filtering condition: check if the link is a blog post using regex\n                    is_blog_post = False\n                    if blog_post_pattern_blog.search(href) or blog_post_pattern_post.search(href):\n                        is_blog_post = True\n\n                    if is_blog_post and len(title) > 5 and href not in [r['Link'] for r in results]:\n                        results.append({\"Title\": title, \"Link\": href})\n                        if len(results) >= 100: break\n                except:\n                    continue\n\n            if len(results) >= 100: break\n\n            # 3. 스크롤을 내려서 데이터를 더 불러옵니다.\n            driver.execute_script(\"window.scrollTo(0, document.body.scrollHeight);\")\n            print(f\"현재 본문에서 {len(results)}개의 블로그 포스팅 링크 확인됨...\")\n            time.sleep(2)\n\n            # 더 이상 결과가 안 늘어나면 중단\n            if len(all_links) == 0: break\n\n        # 저장\n        df = pd.DataFrame(results)\n        df.to_csv(\"blogurlout.csv\", index=False, encoding=\"utf-8-sig\")\n        print(f\"✅ 최종 완료! {len(df)}개의 블로그 포스팅 주소를 저장했습니다.\")\n\n    finally:\n        driver.quit()\n\nif __name__ == \"__main__\":\n    solve_naver_2026()", "import pandas as pd\n\ntry:\n    df_output = pd.read_csv('out.csv')\n    print(\"out.csv 파일 내용:\")\n    display(df_output.head())\n    print(f\"총 {len(df_output)}개의 블로그 링크가 저장되어 있습니다.\")\nexcept FileNotFoundError:\n    print(\"out.csv 파일을 찾을 수 없습니다. 스크랩핑이 제대로 완료되었는지 확인해주세요.\")\nexcept Exception as e:\n    print(f\"파일을 읽는 도중 오류가 발생했습니다: {e}\")"], "4.블로그본문스크랩1.ipynb": ["import pandas as pd\nimport requests\nfrom bs4 import BeautifulSoup\nimport time\nimport re\n\ndef get_naver_real_url(url):\n    \"\"\"일반 네이버 블로그 주소를 본문이 노출되는 실제 주소로 변환\"\"\"\n    if \"blog.naver.com\" in url:\n        match = re.search(r\"blog.naver.com/([\\w-]+)/(\\d+)\", url)\n        if match:\n            user_id = match.group(1)\n            log_no = match.group(2)\n            return f\"https://blog.naver.com/PostView.naver?blogId={user_id}&logNo={log_no}\"\n    return url\n\ndef scrape_naver_blog(input_file='blogurlout.csv', output_file='blogmain.csv'):\n    try:\n        # ✅ FIX 3: BOM 문자 제거를 위해 encoding='utf-8-sig' 추가\n        df_input = pd.read_csv(input_file, encoding='utf-8-sig')\n\n        # ✅ FIX 1: 'Link' → 'link' (소문자로 통일해서 비교)\n        url_col = [col for col in df_input.columns if 'link' in col.lower()][0]\n\n        # ✅ FIX 2: title 컬럼도 함께 추출\n        title_col = [col for col in df_input.columns if 'title' in col.lower()][0]\n\n        urls = df_input[url_col].dropna().tolist()[:100]\n        titles = df_input[title_col].dropna().tolist()[:100]\n\n    except Exception as e:\n        print(f\"파일 로드 오류: {e}\")\n        return\n\n    results = []\n    headers = {\n        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'\n    }\n\n    print(f\"네이버 블로그 본문 수집 시작 (총 {len(urls)}개)...\")\n\n    for i, (original_url, title) in enumerate(zip(urls, titles)):  # ✅ FIX 2: title 함께 순회\n        try:\n            real_url = get_naver_real_url(original_url)\n            print(f\"[{i+1}/{len(urls)}] 수집 중: {original_url}\")\n\n            resp = requests.get(real_url, headers=headers, timeout=10)\n            resp.raise_for_status()\n            soup = BeautifulSoup(resp.text, 'html.parser')\n\n            content_area = soup.select_one('.se-main-container')\n\n            if content_area:\n                content = content_area.get_text(separator='\\n').strip()\n            else:\n                content_area = soup.select_one('#postViewArea')\n                content = content_area.get_text(separator='\\n').strip() if content_area else \"본문을 찾을 수 없음\"\n\n            results.append({\n                \"Title\": title,       # ✅ FIX 2: 이제 title 정상 참조\n                'Link': original_url,\n                'content': content\n            })\n\n            time.sleep(1.5)\n\n        except Exception as e:\n            print(f\"실패: {original_url} -> {e}\")\n            results.append({'Title': title, 'Link': original_url, 'content': f'Error: {e}'})\n\n    df_result = pd.DataFrame(results)\n    df_result.to_csv(output_file, index=False, encoding='utf-8-sig')\n    print(f\"\\n✅ 네이버 블로그 스크랩 완료! '{output_file}' 확인.\")\n\nif __name__ == \"__main__\":\n    scrape_naver_blog()"]};
+
+const D = String.raw;
+// 블록 타입: p(문단) concepts flow steps note formula tree table
+const MODS = [
+{id:"m0", short:"시작하기", title:"시작하기: 오늘의 흐름과 준비물", time:"0:00 ~ 5:37",
+ goal:"오늘은 데이터 수집 → 심층 보고서 → PPT를 한 줄로 잇습니다. 핵심은 AI에게 좋은 재료(직접 모은 데이터)를 주고, 검증된 스킬로 일을 시키는 것입니다.",
+ blocks:[
+  {h:"오늘의 파이프라인"},
+  {flow:[["Comet으로 조사·검증"],["Colab으로 뉴스 100건 크롤링"],["content_news.csv",1],["/deep-research",1],["HTML 보고서"],["/ppt-master",1],["PPT"]]},
+  {h:"핵심 개념 한눈에"},
+  {concepts:[
+   ["AI 브라우저 (Comet)","Perplexity가 만든 브라우저. 오른쪽 위 '어시스턴트'가 지금 보고 있는 페이지를 읽고 요약·분석·보고서 작성을 합니다."],
+   ["크롤링과 CSV","웹페이지에서 정보를 자동으로 모으는 일이 크롤링. 결과는 엑셀로 열리는 CSV(쉼표로 구분한 표 파일)로 저장합니다."],
+   ["구글 코랩 (Colab)","브라우저에서 파이썬을 돌리는 구글 무료 노트북. 안에 있는 Gemini가 에러를 고치고 필요한 프로그램을 설치해 줍니다."],
+   ["스킬 (Skill)","전문 지식과 작업 순서를 담은 SKILL.md 폴더. 프롬프트 → 컨텍스트 → 스킬 순으로 발전한 다음 단계입니다."],
+   ["작업 폴더와 신뢰(Trust)","AI 에이전트는 보안 때문에 내가 신뢰한 폴더와 그 하위 폴더만 읽고 씁니다. 입력 파일도 결과물도 그 안에 둡니다."],
+   ["슬래시(/) 호출","채팅창에 / 를 치고 스킬 이름을 고르면 스킬이 불려옵니다. 예: /deep-research, /ppt-master"],
+   ["수락 및 실행 · 승인","에이전트는 중간중간 허락을 구합니다. 수락·승인을 눌러 줘야 다음 일을 계속합니다."]
+  ]},
+  {h:"수업 전 준비"},
+  {steps:[
+   {t:"크롬 브라우저에 구글 계정으로 로그인", cp:"1"},
+   {t:"카카오톡 PC 버전 설치", d:"긴 프롬프트와 코드는 줌 채팅에서 잘리므로 단톡방으로 배포됩니다. 스마트폰으로는 실습이 어렵습니다."},
+   {t:"듀얼 모니터 권장", d:"한 화면은 강사 화면, 다른 화면은 내 실습 화면."},
+   {t:"강의 자료 2주차 압축파일 다운로드 후 압축 풀기", d:"공지사항 > 녹화본 다시보기 > 강의자료 폴더(비밀번호는 공지 참고) > 2주차"},
+   {t:"ChatGPT 데스크톱 앱, Antigravity 설치", d:"설치 방법은 강의 자료의 가이드 PDF(ChatGPT 데스크톱 설치법, Google Antigravity Mastery)에 있습니다."}
+  ]},
+  {note:["tip","진행 방식: 강사가 '여기까지 되신 분 3번' 하고 부르면 줌 채팅에 3을 입력합니다. 각 단계 옆 번호 배지가 그 번호입니다."]}
+ ]},
+
+{id:"m1", short:"Comet 브라우저", title:"실습 1. Comet 브라우저 어시스턴트", time:"5:37 ~ 40:30",
+ goal:"보고 있는 페이지 그대로 AI에게 일을 시킵니다. 검색 결과 보고서, 영상 요약, 리뷰 감성분석에서 컨설팅 개선안과 광고 기획까지 한 상품으로 이어 봅니다.",
+ blocks:[
+  {h:"설치"},
+  {steps:[
+   {t:"Comet 설치 후 실행", cp:"2", d:"크롬 확장이 아니라 별도 브라우저입니다. 오른쪽 위에서 Perplexity(구글 계정) 로그인.", copy:[["URL","https://www.perplexity.ai/comet"]]}
+  ]},
+  {h:"따라하기"},
+  {steps:[
+   {t:"블로그 검색 결과로 보고서 만들기", cp:"3", d:"Comet에서 아래 주소를 열고 오른쪽 위 어시스턴트를 열어 프롬프트를 붙여넣습니다.",
+    copy:[["URL","https://search.naver.com/search.naver?ssc=tab.blog.all&query=grok+bot"],["프롬프트",'"grok bot" 최신 블로그 글을 검색해서 오픈클로에 대해 보고서를 작성해줘']]},
+   {t:"표가 깨지면 변환해서 옮기기", d:"답변의 복사 버튼으로 메모장에 붙이면 표가 깨집니다(마크다운 텍스트라서). 아래 사이트 왼쪽에 붙여넣고 오른쪽 결과를 복사하거나, 구글 문서·워드에 바로 붙이면 표가 유지됩니다.",
+    copy:[["URL","https://markdowntohtml.com/"]]},
+   {t:"유튜브 영상 요약", cp:"4", d:"영상을 열고 어시스턴트를 열면 추천 질문 3개가 뜹니다. '이 비디오를 요약해 주세요'를 클릭.",
+    copy:[["URL","https://www.youtube.com/watch?v=MzObKXUaSbc"]]},
+   {t:"쿠팡 상품 리뷰 감성분석", cp:"5", d:"예시 상품은 날개 없는 선풍기. 리뷰 1,080개 중 10건과 쿠팡 리뷰 요약만 보고 분석했습니다.",
+    copy:[["URL","https://www.coupang.com/vp/products/8085515094"],["프롬프트","이 제품의 고객후기를 크롤링하여 감성분석을 해줘"]]},
+   {t:"컨설턴트 관점: USP와 개선안", cp:"6", d:"예시 결과: 소음 불만은 상세페이지에 미리 고지하고 수면·저소음 모드를 안내해 무료반품 손실을 줄이라는 제안.",
+    copy:[["프롬프트","위 긍정적인 반응을 기반으로 고객 관점 USP 3개를 요약해줘. 단점을 분석하여 개선안을 도출해줘."]]},
+   {t:"SNS 홍보문구", cp:"7",
+    copy:[["프롬프트","위 USP기반 홍보문구를 인스타그램/스레드 용으로 타겟고객에 맞게 각각 작성해줘"]]},
+   {t:"8초 광고 영상 기획", cp:"8", d:"영어 프롬프트는 영상 생성 AI에 그대로 붙여 씁니다. 쇼츠 제작은 다음 주차.",
+    copy:[["프롬프트","위 USP 기반 광고 영상 기획안을 작성해줘. Veo3 용 동영상 프롬프트를 영어로 작성해줘(8초 길이). 적합한 한국어 대사 포함."]]},
+   {t:"블로그 100개로 업무 우선순위 정리", cp:"9",
+    copy:[["URL","https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query=ai+%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8"],["프롬프트","'Ai 에이전트' 블로그 글 100개를 검색해서 AI 에이전트로 현재 가능한 업무를 우선순위로 정리해줘"]]},
+   {t:"뉴스 100건 크롤링 요청", cp:"1", d:"CSV 파일 대신 파이썬 코드가 돌아옵니다. 이 코드를 실습 2에서 코랩으로 돌립니다.",
+    copy:[["URL","https://search.naver.com/search.naver?ssc=tab.news.all&where=news&sm=tab_jum&query=ai+%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8"],["프롬프트","'ai 에이전트' 뉴스기사를 제목, URL, 내용 순서로 100개 크롤링하여 ai뉴스.csv 파일로 저장해줘"]]}
+  ]},
+  {note:["warn","<b>검증 습관</b> AI가 '100개를 봤다'고 해도 믿지 마세요. 쿠팡 사례처럼 일부만 보고 답하는 경우가 많습니다. 그래서 다음 실습에서 데이터를 직접 모읍니다."]},
+  {note:["tip","<b>참고: 블로그 분석 결과(강의 예시)</b> AI 에이전트 활용 우선순위는 1) 단순 반복 업무 자동화 2) 리서치·데이터 수집 3) 콘텐츠 제작·마케팅 4) 고객 응대·리뷰 분석 5) 코딩 6) 전략 의사결정 지원 순이었습니다."]}
+ ]},
+
+{id:"m2", short:"Colab 크롤링", title:"실습 2. 구글 코랩으로 뉴스 크롤링", time:"40:30 ~ 1:35:50",
+ goal:"코딩을 몰라도 됩니다. 코드를 붙여 실행하고, 에러는 코랩 안의 Gemini에게 맡깁니다. 결과는 제목·링크·본문이 담긴 content_news.csv입니다.",
+ blocks:[
+  {h:"원리: 에러 자동 수정 루프"},
+  {flow:[["코드 붙여넣기"],["▶ 실행"],["에러"],["Gemini에게 설명·수정 요청",1],["수락 및 실행",1],["다시 ▶ 실행"],["성공할 때까지 반복"]]},
+  {note:["warn","<b>주의</b> Comet이 준 원본 코드는 품질이 낮아 수정에 며칠 걸릴 수 있습니다. 수업에서는 원리만 체험하고, 강사가 완성한 코드(아래 실습 파일)로 실습합니다."]},
+  {h:"실습 파일 받기와 코드 복사"},
+  {p:"강사가 완성한 노트북 4개입니다. 파일로 받아 코랩에 올리거나, 코랩 새 노트에 코드를 복사해 붙여넣어도 똑같이 동작합니다. 키워드와 개수를 입력하면 아래 코드에 바로 반영됩니다."},
+  {colab:true},
+  {h:"A. 원리 체험 (Comet 코드)"},
+  {steps:[
+   {t:"크롬에서 코랩 열기 → 새 노트", cp:"3", d:"Comet이 아니라 크롬 브라우저에서 엽니다.", copy:[["URL","https://colab.research.google.com/?hl=ko"]]},
+   {t:"Comet이 준 코드 전체를 붙여넣기", cp:"4", d:"Ctrl+A → Ctrl+C → Ctrl+V. 맨 위 import 줄까지 빠짐없이. Comet에 코드가 없으면 단톡방 코드를 '전체 보기'에서 복사."},
+   {t:"▶ 실행 후 에러를 Gemini에게 넘기기", cp:"5·6", d:"수집 0개로 에러가 나면 오류를 설명·수정해 달라고 하고 '수락 및 실행'을 계속 누릅니다.",
+    copy:[["프롬프트","이 오류를 설명하고 수정해줘. 나는 개발자가 아니라서 직접 고칠 수 없으니 네가 코드를 수정하고 실행까지 해줘."]]}
+  ]},
+  {h:"B. 완성 코드로 뉴스 주소 수집"},
+  {steps:[
+   {t:"코랩 > 노트 업로드 > 1.뉴스주소_크롤러.ipynb", cp:"7", d:"위 '노트북 4개 받기'로 받은 zip을 풀어 둡니다. 파일 받기가 안 되면 코랩 새 노트에 1번 코드를 복사해 붙여넣으세요."},
+   {t:"▶ 실행, 설치 에러는 Gemini에게", d:"처음 에러는 코드 문제가 아니라 크롬 드라이버·pandas 같은 프로그램 설치 문제입니다. 코드의 !pip 는 '없으면 설치'라는 뜻."},
+   {t:"'성공! 총 100개의 뉴스를 저장했습니다' 확인 후 다운로드", cp:"8·9", d:"왼쪽 폴더 아이콘 > url_news.csv 옆 점 3개 > 다운로드. 제목과 링크 101행(머리글 포함)."}
+  ]},
+  {h:"C. 본문 수집"},
+  {steps:[
+   {t:"새 창에서 2.뉴스본문_스크랩.ipynb 업로드", cp:"1·2", d:"또는 코랩 새 노트에 2번 코드를 복사해 붙여넣기."},
+   {t:"폴더 아이콘 > 업로드 > url_news.csv 올리기", cp:"3", d:"방금 다운로드한 파일을 반대로 올리는 것입니다."},
+   {t:"▶ 실행 후 content_news.csv 다운로드", cp:"4·5", d:"한경·뉴스1 등 일부 언론사는 수집을 막아 본문이 빠집니다. 100건 중 약 80건이 분석에 쓰였습니다."}
+  ]},
+  {h:"D. 내 주제로 바꾸기"},
+  {p:"위 '내 크롤링 설정'에 키워드·개수·파일 번호를 입력하고 코드를 다시 복사하면 됩니다. 파일로 올린 노트북이라면 1번은 맨 아래 줄과 df.to_csv 줄, 2번은 맨 아래 줄을 같은 값으로 고치세요. 데이터가 많을수록 보고서가 좋아집니다."},
+  {h:"E. 보너스: 네이버 블로그 크롤링"},
+  {steps:[
+   {t:"3.블로그주소 크롤러 실행 → blogurlout.csv 다운로드", d:"크롬 설치 명령이 셀 안에 들어 있어 처음 실행은 몇 분 걸립니다."},
+   {t:"4.블로그본문스크랩1에 blogurlout.csv 업로드 후 실행 → blogmain.csv 다운로드", d:"블로그 본문 CSV도 실습 4의 /deep-research에 그대로 넣을 수 있습니다."}
+  ]}
+ ]},
+
+{id:"m3", short:"스킬 준비", title:"실습 3. 스킬 내려받아 작업 폴더에 설치", time:"1:36 ~ 2:17",
+ goal:"스킬은 직접 만들 수도 있지만 토큰이 빨리 소진됩니다. 전문가가 공유한 스킬을 내려받아 폴더에 넣고, Claude·ChatGPT·Gemini 세 곳에서 모두 쓰게 만듭니다.",
+ blocks:[
+  {h:"완성될 폴더 구조"},
+  {tree:D`바탕화면
+└─ work                         <span class="c">← 작업 폴더</span>
+   ├─ report                    <span class="c">← 보고서 작업 (딥리서치)</span>
+   │  ├─ .claude\skills\...     <span class="c">← Claude · Claude Code</span>
+   │  ├─ .codex\skills\...      <span class="c">← ChatGPT (Codex)</span>
+   │  ├─ .agents\skills\...     <span class="c">← Gemini (Antigravity)</span>
+   │  └─ content_news.csv       <span class="c">← 실습 2에서 만든 입력 파일</span>
+   └─ slide-master              <span class="c">← PPT 작업 (폴더명 끝 -main 삭제)</span>
+      ├─ .claude\skills\...
+      ├─ .codex\skills\...
+      └─ .agents\skills\...`},
+  {note:["warn","<b>오타 주의</b> 점(.)으로 시작하는 .claude, 그리고 skills의 마지막 s. 하나라도 틀리면 스킬이 보이지 않습니다."]},
+  {h:"따라하기"},
+  {steps:[
+   {t:"(선택) Claude에서 스킬 직접 만들어 보기", cp:"7", d:"만든 SKILL.md의 샘플 회사 정보(회사명·연락처·사업자번호·대표자·사업 내용)를 우리 회사 것으로 바꿔 쓰면 됩니다.",
+    copy:[["프롬프트","'AI 교육기관' 주제로 홈페이지를 만들려고 해. 클로드 코드에서 hpskill.md를 만들려고 해. 작성 예시를 만들어줘."]]},
+   {t:"스킬 라이브러리에서 deep-research 찾기", cp:"8", d:"skills.sh 검색창에 deep-research 입력.",
+    copy:[["URL","https://www.skills.sh/"],["URL","https://www.skills.sh/claude-office-skills/skills/deep-research"]]},
+   {t:"GitHub에서 ZIP 다운로드 후 압축 풀기", cp:"9", d:"초록색 Code 버튼 > Download ZIP > 마우스 오른쪽 > 압축 풀기. 약 160개 스킬이 들어 있습니다.",
+    copy:[["URL","https://github.com/claude-office-skills/skills"]]},
+   {t:"작업 폴더 만들기", cp:"1", d:"탐색기에서 새로 만들기 > 폴더로 하나씩 만듭니다. 줌 채팅 원문 경로는 아래와 같습니다.",
+    copy:[["경로",D`Desktop\work\report\.claude\skills`],["선택: PowerShell로 한 번에",D`$d=[Environment]::GetFolderPath('Desktop'); New-Item -ItemType Directory -Force "$d\work\report\.claude\skills" | Out-Null`]]},
+   {t:"압축 푼 스킬 폴더들을 skills 안에 붙여넣기", cp:"2", d:"deep-research만 넣어도 되고 전부 넣어도 됩니다."},
+   {t:".claude를 복사해 .codex, .agents 만들기", cp:"3", d:"report 폴더에서 .claude 복사 > 붙여넣기 > '복사본' 이름을 .codex로 변경. 한 번 더 해서 .agents로 변경.",
+    copy:[["선택: PowerShell로 한 번에",D`$r="$([Environment]::GetFolderPath('Desktop'))\work\report"; Copy-Item -Recurse "$r\.claude" "$r\.codex"; Copy-Item -Recurse "$r\.claude" "$r\.agents"`]]},
+   {t:"PPT 스킬 slide-master 설치", cp:"4", d:"ZIP 다운로드(용량 큼) > 압축 풀기 > work 아래로 이동 > 폴더명 끝 -main 삭제 > 안의 .claude를 복사해 .codex, .agents 만들기. 스킬 호출 이름은 /ppt-master.",
+    copy:[["URL","https://github.com/byungjunjang/slide-master"]]}
+  ]},
+  {note:["tip","<b>왜 세 폴더인가</b> 스킬은 Claude Code에서 시작했지만 ChatGPT(Codex)는 .codex, Gemini의 Antigravity는 .agents 폴더에서 같은 스킬을 읽습니다. 내용은 같고 폴더 이름만 다릅니다."]}
+ ]},
+
+{id:"m4", short:"보고서·PPT 만들기", title:"실습 4. 스킬로 보고서와 PPT 만들기", time:"2:17 ~ 2:51",
+ goal:"Antigravity에서 폴더를 열고, 슬래시로 스킬을 불러, 크롤링 파일을 넣으면 심층 보고서가 나옵니다. 그 보고서를 다시 PPT 스킬에 넣습니다.",
+ blocks:[
+  {h:"스킬 호출 공식"},
+  {formula:true},
+  {h:"Antigravity (강사 추천: Gemini 무료 요금제)"},
+  {steps:[
+   {t:"File > Open Folder > work\\report 열기"},
+   {t:"'이 폴더를 신뢰하나요?'에서 I trust 클릭", d:"이 폴더와 하위 폴더만 AI가 읽고 씁니다."},
+   {t:"content_news.csv를 report 폴더에 복사 후 경로 복사", d:"왼쪽 탐색기에서 파일 오른쪽 클릭 > Copy Path."},
+   {t:"채팅창에 /deep 입력 → deep-research 선택 → 경로와 지시 붙여넣기", cp:"8", d:"모델은 기본값 그대로 써도 되고 Claude Sonnet·Opus, GPT-OSS로 바꿀 수도 있습니다.",
+    copy:[["프롬프트","/deep-research [content_news.csv 경로 붙여넣기] 보고서를 작성해 (html형식으로)"],["프롬프트 (짧은 버전)","AI교육에 관한 보고서를 작성해줘"]]},
+   {t:"승인 요청이 뜨면 계속 승인", d:"결과 HTML 보고서는 같은 report 폴더에 자동 저장됩니다."},
+   {t:"work\\slide-master 열기 → /ppt-master로 PPT 만들기", d:"보고서 HTML 파일을 slide-master 폴더로 복사하고 경로를 붙여넣습니다.",
+    copy:[["프롬프트","/ppt-master [보고서 html 경로 붙여넣기] ppt를 작성해"],["프롬프트 (자료 없이)","/ppt-master AI 교육에 관한 시장 동향 PPT 만들어 줘"]]}
+  ]},
+  {h:"ChatGPT 데스크톱 · Claude에서도 같은 방법"},
+  {steps:[
+   {t:"ChatGPT 데스크톱 앱 > Work > 프로젝트 만들기 > work\\report 폴더 지정", d:"웹 버전에는 Work 메뉴가 없습니다. .codex 폴더가 있어야 /deep 으로 스킬이 보입니다. 사용 한도에 걸리면 Antigravity로 진행."},
+   {t:"Claude에서는 지금처럼 / + 스킬명", d:"1주차의 /hwpx 와 같은 방식입니다."}
+  ]},
+  {h:"결과 예시: 대한민국 AI 교육 생태계 종합 분석 보고서"},
+  {p:"뉴스 약 80건을 10개 주제로 나눠 서론 → 영역별 분석 → 논의 → 결론 → 권고사항 → 데이터 출처 순으로 정리했습니다. 이 보고서를 넣어 11장짜리 PPT를 만들었습니다. 둘 다 강의 자료에 들어 있습니다."},
+  {table:{head:["핵심 발견","내용"],rows:[
+   ["1","AI 교육 패러다임이 'AI 개발'에서 'AI 내재화·활용'으로 전환 중"],
+   ["2","정부-기업-대학 간 협력이 전례 없는 수준으로 확대"],
+   ["3","AI 윤리·인문학·비판적 사고 교육의 중요성 재발견"],
+   ["4","AI가 노동시장에 미치는 영향이 본격 가시화"],
+   ["5","취약계층(장애인·노인·농민·소상공인) 대상 AI 교육 수요 급증"]]}},
+  {note:["warn","<b>인용 전 확인</b> 보고서 속 수치와 사례는 AI가 기사에서 뽑아 정리한 것입니다. 강의나 제안서에 쓸 때는 원 기사를 확인하세요."]}
+ ]},
+
+{id:"m5", short:"링크·문제해결", title:"부록. 링크 모음과 문제 해결", time:"",
+ goal:"수업 중 쓴 주소를 한곳에 모았습니다. 막히는 곳은 아래 표에서 먼저 찾아보세요.",
+ blocks:[
+  {h:"링크 모음"},
+  {links:[
+   ["Comet 브라우저","https://www.perplexity.ai/comet"],
+   ["마크다운 → HTML 변환","https://markdowntohtml.com/"],
+   ["구글 코랩","https://colab.research.google.com/?hl=ko"],
+   ["스킬 라이브러리 skills.sh","https://www.skills.sh/"],
+   ["deep-research 스킬","https://www.skills.sh/claude-office-skills/skills/deep-research"],
+   ["claude-office-skills (GitHub)","https://github.com/claude-office-skills/skills"],
+   ["slide-master (GitHub)","https://github.com/byungjunjang/slide-master"],
+   ["네이버 블로그: ai 에이전트","https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query=ai+%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8"],
+   ["네이버 뉴스: ai 에이전트","https://search.naver.com/search.naver?ssc=tab.news.all&where=news&sm=tab_jum&query=ai+%EC%97%90%EC%9D%B4%EC%A0%84%ED%8A%B8"]
+  ]},
+  {h:"자주 막히는 곳"},
+  {table:{head:["증상","원인","해결"],rows:[
+   ["Comet에 어시스턴트가 안 보임","크롬에서 열었음","Comet 브라우저 창에서 페이지를 열고 오른쪽 위 어시스턴트 클릭"],
+   ["코랩 첫 줄이 import csv로 시작","코드 일부만 복사됨","단톡방 '전체 보기'에서 Ctrl+A로 전체 복사, import requests부터 시작하는지 확인"],
+   ["완성 코드인데도 에러","크롬 드라이버 등 프로그램 미설치","Gemini에게 설명·수정 요청 후 수락 및 실행 반복"],
+   ["2번 노트북에서 CSV가 없다고 나옴","1번 결과를 업로드하지 않음","폴더 아이콘 > 업로드로 url_news.csv 올리기. 안 되면 강의 자료의 CSV 사용"],
+   ["본문이 '수집 실패'","언론사가 수집을 차단","정상입니다. 해당 기사만 빠집니다"],
+   ["/ 를 쳐도 스킬이 안 뜸","폴더명 오타나 위치 오류","work\\report\\.claude\\skills 철자와 .codex, .agents 존재 여부 확인, 폴더를 다시 열기"],
+   ["slide-master 스킬이 안 뜸","폴더가 work 밖이거나 -main이 남음","work 아래로 옮기고 폴더명을 slide-master로"],
+   ["ChatGPT·Claude 사용 한도 도달","토큰 소진","Antigravity(Gemini 무료)로 진행"]]}},
+  {h:"복습 순서"},
+  {p:"녹화본을 두세 번 보면서 실습 1 → 4를 그대로 따라 하세요. 다음 주에는 Antigravity를 더 깊게 쓰고 쇼츠 영상을 만듭니다."}
+ ]}
+];
+
+// ---------- 렌더링 ----------
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+let store = {};
+try { store = JSON.parse(localStorage.getItem("w2-steps") || "{}"); } catch(e) { store = {}; }
+const save = () => { try { localStorage.setItem("w2-steps", JSON.stringify(store)); } catch(e) {} };
+
+function copyBlock([label, text]){
+  const isUrl = /^URL$/.test(label);
+  return `<div class="copy${isUrl?" url":""}"><div class="copy-top"><span class="tag">복사 · ${esc(label)}</span><button class="copybtn" type="button" data-copy="${esc(text)}">복사</button></div><pre>${esc(text)}</pre></div>`;
+}
+let total = 0;
+function renderBlock(b, mid){
+  if (b.h) return `<h3>${esc(b.h)}</h3>`;
+  if (b.p) return `<p class="goal">${esc(b.p)}</p>`;
+  if (b.note) return `<div class="note ${b.note[0]}">${b.note[1]}</div>`;
+  if (b.flow) return `<div class="flow">${b.flow.map((f,i)=>`${i?'<em aria-hidden="true">→</em>':''}<span class="${f[1]?'key':''}">${esc(f[0])}</span>`).join("")}</div>`;
+  if (b.concepts) return `<div class="concepts">${b.concepts.map(c=>`<div class="concept"><b>${esc(c[0])}</b><small>${esc(c[1])}</small></div>`).join("")}</div>`;
+  if (b.tree) return `<div class="tree"><pre>${b.tree.replace(/&(?!lt;|gt;|amp;)/g,"&amp;")}</pre></div>`;
+  if (b.colab) return renderColab();
+  if (b.formula) return `<div class="formula"><div class="eq"><span>/스킬명</span><em>+</em><span>파일 첨부 또는 경로</span><em>+</em><span>짧은 지시</span></div><p class="goal" style="margin-top:10px">스킬에 작업 절차가 들어 있어 프롬프트는 짧아도 됩니다. 폴더 지정 → / 로 스킬 호출 → 파일 첨부 → "보고서를 작성해", "ppt를 작성해".</p></div>`;
+  if (b.table) return `<div class="tw"><table><thead><tr>${b.table.head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${b.table.rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  if (b.links) return `<div class="tw"><table><thead><tr><th>이름</th><th>주소</th><th></th></tr></thead><tbody>${b.links.map(l=>`<tr><td>${esc(l[0])}</td><td style="word-break:break-all"><a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[1])}</a></td><td><button class="copybtn" type="button" data-copy="${esc(l[1])}">복사</button></td></tr>`).join("")}</tbody></table></div>`;
+  if (b.steps) return `<ol class="steps">${b.steps.map((s,i)=>{
+      const key = `${mid}-${b._k}-${i}`; total++;
+      const on = !!store[key];
+      return `<li class="step${on?" done":""}"><input type="checkbox" id="${key}" data-key="${key}" ${on?"checked":""}><div class="body"><label for="${key}">${esc(s.t)}</label>${s.cp?`<span class="cp">줌 ${esc(s.cp)}번</span>`:""}${s.d?`<p>${esc(s.d)}</p>`:""}${(s.copy||[]).map(copyBlock).join("")}</div></li>`;
+    }).join("")}</ol>`;
+  return "";
+}
+// ---------- 코랩 노트북 ----------
+const NB_FILES = [
+ {f:"1.뉴스주소_크롤러.ipynb", what:"네이버 뉴스 검색 결과에서 제목과 링크를 모읍니다.", io:["(검색 키워드)","url_news{s}.csv"]},
+ {f:"2.뉴스본문_스크랩.ipynb", what:"1번에서 만든 링크를 하나씩 열어 기사 본문을 모읍니다. 실행 전에 1번 결과 CSV를 왼쪽 폴더 아이콘으로 업로드하세요.", io:["url_news{s}.csv","content_news{s}.csv"]},
+ {f:"3.블로그주소 크롤러.ipynb", what:"보너스. 네이버 블로그 검색 결과에서 글 제목과 링크를 모읍니다.", io:["(검색 키워드)","blogurlout.csv"]},
+ {f:"4.블로그본문스크랩1.ipynb", what:"보너스. 3번에서 만든 링크의 블로그 본문을 모읍니다. 실행 전에 blogurlout.csv를 업로드하세요.", io:["blogurlout.csv","blogmain.csv"]}
+];
+const PREP = `# (선택) 1번 실행 전 준비 셀: 크롬과 크롤링 프로그램 설치
+# 강의에서 Gemini가 대신 설치해 준 작업을 한 셀로 모은 것입니다.
+!pip -q install undetected-chromedriver selenium
+!wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+!apt-get -qq update
+!apt-get -qq install -y ./google-chrome-stable_current_amd64.deb`;
+const DEF = {nkw:"AI 교육", nn:100, sfx:"", bkw:"ai 에이전트", bn:100};
+const getSet = () => {
+  const v = id => (document.getElementById(id)?.value ?? "");
+  const txt = (x,d) => (x.replace(/["\\\n\r]/g,"").trim() || d);
+  const num = (x,d) => { const n = parseInt(x,10); return Number.isFinite(n) ? Math.min(1000, Math.max(1, n)) : d; };
+  return {nkw:txt(v("nkw"),DEF.nkw), nn:num(v("nn"),DEF.nn), sfx:v("sfx").replace(/[^0-9A-Za-z_-]/g,""), bkw:txt(v("bkw"),DEF.bkw), bn:num(v("bn"),DEF.bn)};
+};
+function nbCode(i, s){
+  const src = NB_CODE[NB_FILES[i].f] || [];
+  if (i===0) return [src[0]
+    .replace('scrape_naver_sds_main_only("AI 교육", 100)', `scrape_naver_sds_main_only("${s.nkw}", ${s.nn})`)
+    .replace('df.to_csv("url_news.csv"', `df.to_csv("url_news${s.sfx}.csv"`)];
+  if (i===1) return [src[0]
+    .replace('extract_news_content("url_news.csv", "content_news.csv")', `extract_news_content("url_news${s.sfx}.csv", "content_news${s.sfx}.csv")`)];
+  if (i===2) {
+    let c = src[0];
+    if (s.bkw !== DEF.bkw) c = c.replace("import re\n","import re\nfrom urllib.parse import quote\n")
+      .replace(/url = "https:\/\/search\.naver\.com[^"\n]*"/, `url = "https://search.naver.com/search.naver?ssc=tab.blog.all&sm=tab_jum&query=" + quote("${s.bkw}")`);
+    if (s.bn !== 100) c = c.split("< 100").join(`< ${s.bn}`).split(">= 100").join(`>= ${s.bn}`);
+    const chk = (src[1]||"").split("'out.csv'").join("'blogurlout.csv'").split("out.csv 파일").join("blogurlout.csv 파일");
+    return chk ? [c, chk] : [c];
+  }
+  return [src[0].split("[:100]").join(`[:${s.bn}]`)];
+}
+function renderColab(){
+  const cards = NB_FILES.map((n,i)=>{
+    const cells = nbCode(i, DEF);
+    const prep = i===0 ? `<div class="copy"><div class="copy-top"><span class="tag">복사 · 준비 셀 (에러가 나면 먼저 실행)</span><button class="copybtn" type="button" data-copy="${esc(PREP)}">복사</button></div><pre>${esc(PREP)}</pre></div>` : "";
+    const blocks = cells.map((c,k)=>`<div class="copy"><div class="copy-top"><span class="tag">복사 · 코드${cells.length>1?` 셀 ${k+1}${k===1?" (결과 확인)":""}`:""}</span><button class="copybtn" type="button" id="nbbtn-${i}-${k}" data-copy="${esc(c)}">복사</button></div><pre id="nbpre-${i}-${k}">${esc(c)}</pre></div>`).join("");
+    return `<div class="nbcard"><header><h4>${esc(n.f)}</h4>${i>1?'<span class="badge">보너스</span>':""}</header><div class="io" id="nbio-${i}">입력 ${esc(n.io[0].replace("{s}",""))} → 출력 <b>${esc(n.io[1].replace("{s}",""))}</b></div><p>${esc(n.what)}</p>${prep}${blocks}</div>`;
+  }).join("");
+  return `<div class="nbbox">
+   <div class="dlrow"><p>노트북 4개를 zip 하나로 받습니다(실행 결과는 지운 깨끗한 상태). 압축을 풀고 코랩 > 노트 업로드로 올리세요. 받기가 안 되는 화면이면 아래 코드를 복사해 새 노트에 붙여넣으면 됩니다.</p><button class="btn primary" type="button" id="dlzip">노트북 4개 받기 (zip)</button></div>
+   <div class="settings"><h4>내 크롤링 설정</h4><p class="hint">입력하면 아래 코드가 바로 바뀝니다. 파일로 올린 노트북에는 반영되지 않으니, 바꾼 값으로 쓰려면 코드를 복사해 새 노트에 붙여넣으세요.</p>
+    <div class="fields">
+     <label for="nkw">뉴스 키워드<input id="nkw" value="${DEF.nkw}" autocomplete="off"></label>
+     <label for="nn">뉴스 개수<input id="nn" type="number" min="1" max="1000" value="${DEF.nn}" inputmode="numeric"></label>
+     <label for="sfx">파일 번호 (선택)<input id="sfx" placeholder="예: 2 → url_news2.csv" autocomplete="off"></label>
+     <label for="bkw">블로그 키워드<input id="bkw" value="${DEF.bkw}" autocomplete="off"></label>
+     <label for="bn">블로그 개수<input id="bn" type="number" min="1" max="1000" value="${DEF.bn}" inputmode="numeric"></label>
+    </div></div>
+   ${cards}
+   <div class="note tip"><b>코드에서 바뀐 곳</b> 설정값이 들어가는 줄 외에는 강사 원본 그대로입니다. 3번 결과 확인 셀의 파일명(out.csv)만 실제 저장 파일인 blogurlout.csv로 고쳤습니다. 준비 셀은 강의에서 Gemini가 해 준 설치 작업을 미리 모은 것입니다.</div>
+  </div>`;
+}
+function refreshCodes(){
+  const s = getSet();
+  NB_FILES.forEach((n,i)=>{
+    nbCode(i,s).forEach((c,k)=>{
+      const pre = document.getElementById(`nbpre-${i}-${k}`), btn = document.getElementById(`nbbtn-${i}-${k}`);
+      if (pre) { pre.textContent = c; btn.dataset.copy = c; }
+    });
+    const io = document.getElementById(`nbio-${i}`);
+    if (io) io.innerHTML = `입력 ${esc(n.io[0].replace("{s}",s.sfx))} → 출력 <b>${esc(n.io[1].replace("{s}",s.sfx))}</b>`;
+  });
+}
+let DL = null;
+try { if (window.claude && typeof window.claude.use === "function") window.claude.use("downloads").then(x=>{ DL = x; }, ()=>{}); } catch(e) {}
+async function downloadZip(){
+  const bin = atob(NB_ZIP_B64), bytes = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  const blob = new Blob([bytes], {type:"application/zip"}), name = "크롤링_구글코랩.zip";
+  if (DL) {
+    try { await DL.save({filename:name, data:blob}); say("저장했어요. 압축을 풀어 코랩에 올리세요"); }
+    catch(e) { if (e && e.code === "declined") return; say("이 화면에서는 받기가 안 돼요. 아래 코드를 복사해 쓰세요"); }
+    return;
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "colab_crawling_notebooks.zip";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  say("받기를 시작했어요. 안 되면 아래 코드를 복사해 쓰세요");
+}
+document.addEventListener("input", e=>{ if (e.target.closest && e.target.closest(".settings")) refreshCodes(); });
+
+const main = document.getElementById("main"), tabs = document.getElementById("tabs");
+main.innerHTML = MODS.map((m,mi)=>{
+  let k=0; m.blocks.forEach(b=>{ if(b.steps) b._k = k++; });
+  return `<section class="mod" id="${m.id}" role="tabpanel" aria-labelledby="t-${m.id}" ${mi?"hidden":""}>
+    <div class="mod-head"><h2>${esc(m.title)}</h2>${m.time?`<span class="time">녹화본 ${esc(m.time)}</span>`:""}</div>
+    <p class="goal">${esc(m.goal)}</p>
+    ${m.blocks.map(b=>renderBlock(b,m.id)).join("")}
+    <div class="nav"><button class="btn" type="button" data-go="${mi-1}" ${mi?"":"disabled"}>← ${mi?esc(MODS[mi-1].short):""}</button><button class="btn primary" type="button" data-go="${mi+1}" ${mi<MODS.length-1?"":"disabled"}>${mi<MODS.length-1?esc(MODS[mi+1].short)+" →":""}</button></div>
+  </section>`;
+}).join("");
+tabs.innerHTML = MODS.map((m,mi)=>`<li><button role="tab" id="t-${m.id}" aria-controls="${m.id}" aria-selected="${mi?"false":"true"}" data-go="${mi}"><span class="n">${mi===0?"00":mi===MODS.length-1?"부록":"0"+mi}</span>${esc(m.short)}</button></li>`).join("");
+
+function show(i, scroll){
+  if (i<0 || i>=MODS.length) return;
+  MODS.forEach((m,mi)=>{
+    document.getElementById(m.id).hidden = mi!==i;
+    document.getElementById("t-"+m.id).setAttribute("aria-selected", mi===i?"true":"false");
+  });
+  const tb = document.getElementById("t-"+MODS[i].id), bar = document.querySelector(".tabs");
+  bar.scrollLeft = Math.max(0, tb.offsetLeft - 16);
+  try { history.replaceState(null,"","#"+MODS[i].id); } catch(e) {}
+  if (scroll && bar.getBoundingClientRect().top <= 1) window.scrollTo({top: document.querySelector("header").offsetHeight});
+}
+function updateBar(){
+  const done = Object.values(store).filter(Boolean).length;
+  document.getElementById("barFill").style.width = (total? done/total*100 : 0) + "%";
+  document.getElementById("barText").textContent = `${done} / ${total} 단계 완료`;
+}
+const toast = document.getElementById("toast"); let tt;
+function say(msg){ toast.textContent = msg; toast.classList.add("show"); clearTimeout(tt); tt = setTimeout(()=>toast.classList.remove("show"), 1600); }
+
+document.addEventListener("click", e=>{
+  if (e.target.closest("#dlzip")) { downloadZip(); return; }
+  const go = e.target.closest("[data-go]");
+  if (go) { show(+go.dataset.go, true); return; }
+  const cb = e.target.closest(".copybtn");
+  if (cb) {
+    const text = cb.dataset.copy;
+    const done = () => { cb.textContent = "복사됨"; cb.classList.add("ok"); say("복사했어요. 붙여넣기(Ctrl+V) 하세요"); setTimeout(()=>{cb.textContent="복사"; cb.classList.remove("ok");},1500); };
+    const fallback = () => {
+      const pre = cb.closest(".copy")?.querySelector("pre") || cb.closest("tr")?.querySelector("a");
+      if (pre) { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+      say("텍스트를 선택해 두었어요. Ctrl+C로 복사하세요");
+    };
+    try { navigator.clipboard.writeText(text).then(done, fallback); } catch(err) { fallback(); }
+  }
+});
+document.addEventListener("change", e=>{
+  const k = e.target.dataset && e.target.dataset.key;
+  if (!k) return;
+  store[k] = e.target.checked; save();
+  e.target.closest(".step").classList.toggle("done", e.target.checked);
+  updateBar();
+});
+const start = MODS.findIndex(m=>"#"+m.id===location.hash);
+show(start>=0?start:0, false);
+updateBar();
+</script>
+</body>
+</html>
